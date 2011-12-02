@@ -90,7 +90,7 @@ public class Main extends Activity {
 		}
 
 		protected Integer doInBackground(Void... params) {
-			detect = new Detect();
+			detect = new Detect(getApplicationContext());
 			detect.findEverything();
 			detect.dumpFoundInLogcat();
 
