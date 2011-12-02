@@ -2,6 +2,7 @@
 package org.projectvoodoo.simplecarrieriqdetector;
 
 import org.projectvoodoo.simplecarrieriqdetector.Detect.DetectTest;
+
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -10,7 +11,6 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 
 public class Main extends Activity {
 
