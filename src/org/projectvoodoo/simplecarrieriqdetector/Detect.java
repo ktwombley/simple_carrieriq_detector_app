@@ -2,9 +2,13 @@
 package org.projectvoodoo.simplecarrieriqdetector;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.util.Log;
 
 public class Detect {
@@ -12,6 +16,12 @@ public class Detect {
     private static final String TAG = "Voodoo SimpleCarrierIQDetector";
 
     private HashMap<DetectTest, ArrayList<String>> found = new HashMap<DetectTest, ArrayList<String>>();
+
+    private Context mContext;
+
+    public Detect(Context c) {
+        mContext = c;
+    }
 
     public enum DetectTest {
 
@@ -21,7 +31,9 @@ public class Detect {
         ETC_CONFIG("ROM configs", 0),
         SERVICES("System services", 70),
         SYSTEM_BINARIES("ROM binaries and daemons", 70),
-        RUNNING_PROCESSES("Running processes", 200);
+        RUNNING_PROCESSES("Running processes", 200),
+        PACKAGES("Packages", 225),
+        SUSPICIOUS_CLASSES("Suspicious classes", 250);
 
         public String name;
         public int confidenceLevel;
@@ -41,12 +53,32 @@ public class Detect {
         findSystemBinaries();
         findSystemService();
         findRunningProcesses();
+        findPotentialClasses();
+        findPackages();
+    }
+
+    private void findPackages() {
+        String[] potentialPackages = {
+                "com.carrieriq.iqagent",
+                "com.htc.android.iqagent",
+                "com.carrieriq.tmobile"
+        };
+        ArrayList<String> lines = new ArrayList<String>();
+
+        for (String p : potentialPackages) {
+            try {
+                mContext.getPackageManager().getApplicationInfo(p, 0);
+                lines.add(p);
+            } catch (NameNotFoundException e) {
+            }
+
+        }
+        found.put(DetectTest.PACKAGES, lines);
     }
 
     /*
      * Find kernel devices like /dev/sdio_tty_ciq_00
      */
-
     private void findKernelDevices() {
 
         String[] devicePatterns = {
@@ -199,6 +231,36 @@ public class Detect {
         ArrayList<String> lines = Utils.findInCommandOutput("ps", elements);
 
         found.put(DetectTest.RUNNING_PROCESSES, lines);
+    }
+
+    private void findPotentialClasses() {
+
+        String[] classes = {
+                "com.carrieriq.iqagent.service.receivers.BootCompletedReceiver"
+        };
+
+        ArrayList<String> lines = new ArrayList<String>();
+
+        for (String suspiciousclass : classes) {
+            try {
+                Class<?> Object = Class.forName(suspiciousclass);
+
+                // no error here, that means we found the class!
+                lines.add(suspiciousclass);
+
+                // use this later for specific methods, maybe
+                Method onReceiveMethod = Object.getMethod("onReceive", new Class[] {
+                        Context.class, Intent.class
+                });
+
+            } catch (ClassNotFoundException e) {
+            } catch (SecurityException e) {
+            } catch (NoSuchMethodException e) {
+                // that's good! :D
+            } catch (IllegalArgumentException e) {
+            }
+        }
+        found.put(DetectTest.SUSPICIOUS_CLASSES, lines);
     }
 
     /*
